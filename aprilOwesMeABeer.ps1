@@ -25,9 +25,20 @@ function Add-GraphApiRoleToMSI {
         $spList = (Invoke-RestMethod @msiParams).Value
         $msiId = ($spList | Where-Object { $_.displayName -eq $applicationName }).Id
         $graphId = ($spList | Where-Object { $_.appId -eq $graphAppId }).Id
-        $msiItem = Invoke-RestMethod @msiParams -Uri "$($baseUri)/$($msiId)?`$expand=appRoleAssignments"
 
-        $graphRoles = (Invoke-RestMethod @msiParams -Uri "$baseUri/$($graphId)/appRoles").Value | 
+        $msiItemParams = @{
+            Method  = 'Get'
+            Uri     = "$($baseUri)/$($msiId)?`$expand=appRoleAssignments"
+            Headers = @{Authorization = "Bearer $Token"; ConsistencyLevel = "eventual" }
+        }
+        $msiItem = Invoke-RestMethod @msiItemParams
+
+        $graphRoleParams = @{
+            Method  = 'Get'
+            Uri     = "$baseUri/$($graphId)/appRoles"
+            Headers = @{Authorization = "Bearer $Token"; ConsistencyLevel = "eventual" }
+        }
+        $graphRoles = (Invoke-RestMethod @graphRoleParams).Value | 
         Where-Object { $_.value -in $GraphApiRole -and $_.allowedMemberTypes -Contains "Application" } |
         Select-Object allowedMemberTypes, id, value
         foreach ($roleItem in $graphRoles) {
@@ -69,7 +80,7 @@ function Add-GraphApiRoleToMSI {
 #     ClientSecret = $env:secret | ConvertTo-SecureString -AsPlainText -Force
 # }
 # $token = Get-MsalToken @params
-Connect-AzAccount -Tenant "powers-hell.com"
+Connect-AzAccount -Tenant "powers-hell.com" -UseDeviceAuthentication
 $token = Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com"
 $roles = @(
     "DeviceManagementApps.ReadWrite.All", 
@@ -79,5 +90,5 @@ $roles = @(
     "DeviceManagementServiceConfig.ReadWrite.All", 
     "GroupMember.Read.All"
 )
-Add-GraphApiRoleToMSI -ApplicationName "PSCONFEU2023QUICKDEMO" -GraphApiRole $roles -Token $token.token
+Add-GraphApiRoleToMSI -ApplicationName "PSCONFEU2023QUICKDEMO" -GraphApiRole $roles -Token $token.Token
 #endregion

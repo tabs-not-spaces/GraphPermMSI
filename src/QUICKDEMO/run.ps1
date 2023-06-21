@@ -4,8 +4,12 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 try {
     #region auth
-    if ($env:MSI_SECRET) { $token = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com/").Token }
+    if ($env:MSI_SECRET) {
+        Write-Output "Using MSI to authenticate"
+        $token = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com/").Token 
+    }
     else {
+        write-output "Using SPN to authenticate"
         Disable-AzContextAutosave -Scope Process | Out-Null
         $cred = New-Object System.Management.Automation.PSCredential $env:appId, ($env:secret | ConvertTo-SecureString -AsPlainText -Force)
         Connect-AzAccount -ServicePrincipal -Credential $cred -Tenant $env:tenant
